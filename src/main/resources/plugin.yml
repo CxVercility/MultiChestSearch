@@ -1,0 +1,4 @@
+commands:
+  search:
+    description: 'Searches all marked chests'
+    usage: '/<command> namespace:item_name'

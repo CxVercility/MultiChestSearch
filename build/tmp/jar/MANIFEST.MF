@@ -1,0 +1,9 @@
+Manifest-Version: 1.0
+Project: MultiChestSearch
+Project-Group: de.kaonashi.minecraft
+Project-ID: multichestsearch
+Project-Version: MC1.16.3-1.0.0-local
+Spigot-Version: 1.16.3-R0.1-SNAPSHOT
+MC-Version: 1.16.3
+BuildDate: Mon Nov 16 00:10:56 CET 2020
+

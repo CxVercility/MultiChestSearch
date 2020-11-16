@@ -1,0 +1,8 @@
+rootProject.name = 'MultiChestSearch'
+
+/*
+ * included projects
+ */
+if (System.env.BUILD_NUMBER == null) {
+    includeFlat 'MinecraftCommons', 'TestMC'
+}

@@ -1,0 +1,1 @@
+typeSearchIndex = [{"l":"All Classes","url":"allclasses-index.html"},{"p":"de.kaonashi.minecraft.multichestsearch","l":"MultiChestSearch"},{"p":"de.kaonashi.minecraft.multichestsearch","l":"MultiChestSearchItem"},{"p":"de.kaonashi.minecraft.multichestsearch","l":"MultiChestSearchListener"},{"p":"de.kaonashi.minecraft.multichestsearch","l":"SearchCommand"}]
