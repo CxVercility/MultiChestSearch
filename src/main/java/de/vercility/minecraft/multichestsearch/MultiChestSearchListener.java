@@ -1,4 +1,4 @@
-package de.kaonashi.minecraft.multichestsearch;
+package de.vercility.minecraft.multichestsearch;
 
 import java.io.File;
 import java.util.HashSet;
@@ -29,6 +29,10 @@ public class MultiChestSearchListener implements Listener {
         this.chestFile = chestFile;
     }
 
+    /**
+     * Mark a chest on right-click with chest marker item
+     * @param event The event we're testing
+     */
     @EventHandler(priority = EventPriority.NORMAL, ignoreCancelled = true)
     public void markChest(final PlayerInteractEvent event) {
         if (event.getAction() != Action.RIGHT_CLICK_BLOCK) {
@@ -41,11 +45,12 @@ public class MultiChestSearchListener implements Listener {
         if (itemInMainHand == null || !ItemHelper.compareItemsLookalike(itemInMainHand,MultiChestSearchItem.ITEM_STACK)) {
             return;
         }
-        if (event.getClickedBlock().getType() != Material.CHEST) {
+        Material type = event.getClickedBlock().getType();
+        if (type != Material.CHEST && type != Material.SHULKER_BOX) {
             return;
         }
         // Ignore any event that isn't caused by a right click, where the causing player has a stick in his main hand
-        // and the targeted block is a chest
+        // and the targeted block is a chest or shulker box
         Player player = event.getPlayer();
         UUID playerId = player.getUniqueId();
         Location location = event.getClickedBlock().getLocation();

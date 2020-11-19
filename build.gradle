@@ -2,8 +2,6 @@
  * MultiChestSearch - build.gradle
  */
 apply plugin: 'java-library'
-apply plugin: 'maven-publish'
-apply plugin: 'eclipse'
 apply plugin: 'io.freefair.lombok'
 apply plugin: 'de.kaonashi.gradle.nexusupload'
 apply plugin: 'de.kaonashi.gradle.spigot'
@@ -45,10 +43,6 @@ repositories {
         url 'https://hub.spigotmc.org/nexus/content/repositories/snapshots/'
     }
     maven {
-        name 'SpigotMC-Nexus Sonatype-Nexus-Snapshots'
-        url 'https://hub.spigotmc.org/nexus/content/repositories/sonatype-nexus-snapshots/'
-    }
-    maven {
         name 'dmulloy2'
         url 'https://repo.dmulloy2.net/nexus/repository/public/'
     }
@@ -56,18 +50,13 @@ repositories {
         name 'sonatype'
         url 'https://oss.sonatype.org/content/groups/public/'
     }
-    flatDir {
-        name 'local TestServer'
-        dirs '../TestServer'
-    }
+
 }
 
 ext.config = parseConfig(file('build.properties'))
 
 dependencies {
     implementation 'org.spigotmc:spigot-api:' + config.spigotapi.version
-    testImplementation 'junit:junit:4.13'
-    testImplementation 'org.hamcrest:hamcrest:2.2'
 
     if (System.env.BUILD_NUMBER == null) {
         implementation project(':MinecraftCommons')
@@ -79,8 +68,6 @@ dependencies {
         }
     }
 
-    // Spigot Server implementation dependency
-    //implementation 'org.spigotmc.spigot-server:Spigot-1.16.3:2740d5a-890130b-0000'
 }
 
 /*
@@ -93,7 +80,7 @@ if (System.env.BUILD_NUMBER == null) {
 }
 
 version = 'MC' + config.minecraft.version + '-' + config.project.version + '-' + config.buildNumber
-group = 'de.kaonashi.minecraft.multichestsearch'
+group = 'de.vercility.minecraft.multichestsearch'
 archivesBaseName = config.project.name
 description = config.project.description
 
@@ -114,21 +101,10 @@ spigot {
         version = config.project.version + '-' + config.buildNumber
         apiVersion = 1.16
         main = group + '.' + config.project.name
-        authors = ['Kaonashi97']
+        authors = ['Vercility / Kaonashi97']
         website = 'https://kaonashi.de/'
     }
 }
-
-eclipse {
-    project {
-        comment = config.project.description
-    }
-    classpath {
-        downloadSources = true
-        downloadJavadoc = true
-    }
-}
-
 
 /*
  * tasks and task configurations
@@ -153,88 +129,15 @@ compileJava {
     options.encoding = 'UTF-8'
 }
 
-compileTestJava {
-    sourceCompatibility = targetCompatibility = '1.8'
-    options.encoding = 'UTF-8'
-}
-
 jar {
     manifest {
         from projectManifest
     }
 }
 
-javadoc {
-    failOnError = false
-    options.footer = 'Kaonashi.DE Minecraft Development'
-    options.header = config.project.name + ' ' + config.project.version
-    options.bottom = 'Copyright &copy; 2020 Kaonashi.DE. All rights reserved.'
-    options.overview = project.projectDir.getAbsolutePath() + File.separator + 'overview.html'
-    options.charSet = 'UTF-8'
-    options.encoding = 'UTF-8'
-    options.source = '1.8'
-    options.links(
-        'https://docs.oracle.com/javase/8/docs/api/'
-    )
-    options.author = true
-    options.version = true
-    options.use = true
-}
-
-task copyMissingJavadoc(type: Copy) {
-    from file(projectDir.getAbsolutePath() + '/javadoc')
-    into file(buildDir.getAbsolutePath() + '/docs/javadoc/resources/fonts')
-}
-copyMissingJavadoc.dependsOn javadoc
-build.dependsOn copyMissingJavadoc
-
-publishing {
-    publications {
-        kaonashi(MavenPublication) {
-            from components.java
-            artifact sourcesJar
-            artifact javadocJar
-
-            groupId = nexusUpload.groupId
-            artifactId = nexusUpload.artifactId
-            version = nexusUpload.version
-
-            pom {
-                name = config.project.name
-                description = config.project.description
-                packaging = 'jar'
-                url = 'https://kaonashi.de/'
-                developers {
-                    developer {
-                        id = 'Kaonashi97'
-                        name = 'Kaonashi97'
-                        email = 'kaonashi97@kaonashi.de'
-                    }
-                }
-            }
-        }
-    }
-    repositories {
-        maven {
-            name 'KaonashiDE'
-            url nexusUpload.nexusUrl
-            credentials {
-                username nexusUpload.nexusUsername
-                password nexusUpload.nexusPassword
-            }
-        }
-    }
-}
-
 tasks.withType(GenerateModuleMetadata) {
     enabled = false
 }
-
-if (System.env.NO_DEPLOY != null && !Boolean.parseBoolean(System.env.NO_DEPLOY)) {
-    build.dependsOn publishKaonashiPublicationToKaonashiDERepository
-}
-
-
 /*
  * helpers
  */

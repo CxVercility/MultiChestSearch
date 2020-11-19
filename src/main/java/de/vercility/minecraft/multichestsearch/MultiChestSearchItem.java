@@ -1,4 +1,4 @@
-package de.kaonashi.minecraft.multichestsearch;
+package de.vercility.minecraft.multichestsearch;
 
 import org.bukkit.Material;
 import org.bukkit.NamespacedKey;

@@ -1,21 +1,18 @@
-package de.kaonashi.minecraft.multichestsearch;
+package de.vercility.minecraft.multichestsearch;
 
-import java.util.Collections;
-import java.util.HashMap;
-import java.util.HashSet;
-import java.util.List;
-import java.util.Map;
-import java.util.UUID;
+import java.util.*;
 
 import org.bukkit.Bukkit;
 import org.bukkit.Location;
 import org.bukkit.Material;
 import org.bukkit.Particle;
-import org.bukkit.block.Chest;
+import org.bukkit.block.Container;
+import org.bukkit.block.ShulkerBox;
 import org.bukkit.command.Command;
 import org.bukkit.command.CommandSender;
 import org.bukkit.entity.Player;
 import org.bukkit.inventory.ItemStack;
+import org.bukkit.inventory.meta.BlockStateMeta;
 import org.bukkit.plugin.Plugin;
 import org.bukkit.scheduler.BukkitTask;
 import org.bukkit.util.Vector;
@@ -37,10 +34,10 @@ public class SearchCommand implements CommandTabCompleter {
     /**
      * Execute the /search command
      *
-     * @param sender The entity that issued the command
+     * @param sender  The entity that issued the command
      * @param command The command object
-     * @param label IDK
-     * @param args Array of arguments passed to the command
+     * @param label   IDK
+     * @param args    Array of arguments passed to the command
      * @return Whether the command has completed successfully or not
      */
     @Override
@@ -57,7 +54,7 @@ public class SearchCommand implements CommandTabCompleter {
         // Create a HashSet for the player if its the first time he uses the command or if he cleared his marked chests
         locations.putIfAbsent(player.getUniqueId(), new HashSet<>());
         // Remove all locations in which there no longer is a chest (removed since last command)
-        locations.get(player.getUniqueId()).removeIf(Loc -> Loc.getBlock().getType() != Material.CHEST);
+        locations.get(player.getUniqueId()).removeIf(Loc -> (Loc.getBlock().getType() != Material.CHEST && Loc.getBlock().getType() != Material.SHULKER_BOX));
         String arg0 = args[0];
         switch (args.length) {
             case 1:
@@ -77,23 +74,25 @@ public class SearchCommand implements CommandTabCompleter {
         }
     }
 
+
     /**
      * Prints all valid commands
      *
      * @param player Player who issued the command
      */
     private void printHelp(Player player) {
-        player.sendMessage("/search <Item Name> - Search for item in all marked chests");
+        player.sendMessage("/search <Item Name> - Search for item in all marked chests. Ignores letter case. Uses quotation marks to only print exact matches e.g /search \"Stone\"");
         player.sendMessage("/search <Item Name> <radius> - Only search chests within set radius");
         player.sendMessage("/search clear - Unmark all chests");
         player.sendMessage("/search remove - Next clicked chest will be unmarked");
         player.sendMessage("/search mark <radius> - Mark all chests within set radius (horizontally, up to 10 Blocks up/down. Max radius 50)");
     }
 
+
     /**
      * Parse command radius to int, or print command help
      *
-     * @param arg Argument passed to the command
+     * @param arg    Argument passed to the command
      * @param player Player who issued the command
      * @return Arg parsed as int if valid integer and smaller than maxRadius, -1 else.
      */
@@ -104,18 +103,18 @@ public class SearchCommand implements CommandTabCompleter {
             if (radius <= 0 || radius > this.maxRadius) {
                 return -1;
             }
-        }
-        catch (NumberFormatException e) {
+        } catch (NumberFormatException e) {
             radius = -1;
         }
         return radius;
     }
 
+
     /**
      * Execute any radial command
      *
      * @param player Player who issued the command
-     * @param arg0 The command
+     * @param arg0   The command
      * @param radius Radius within which the command is to be executed
      */
     private void radialCommand(Player player, String arg0, int radius) {
@@ -135,7 +134,7 @@ public class SearchCommand implements CommandTabCompleter {
      * Execute any command without arguments
      *
      * @param player Player who issued the command
-     * @param arg0 The Command
+     * @param arg0   The Command
      */
     private void noArgsCommand(Player player, String arg0) {
         switch (arg0) {
@@ -165,8 +164,7 @@ public class SearchCommand implements CommandTabCompleter {
     private void radialMark(Player player, int radius) {
         int amount = 0;
         final Location playerLocation = player.getLocation();
-        final Location center = new Location(player.getWorld(), playerLocation.getBlockX(), playerLocation.getBlockY(), playerLocation.getBlockZ(), 0,
-            0);
+        final Location center = new Location(player.getWorld(), playerLocation.getBlockX(), playerLocation.getBlockY(), playerLocation.getBlockZ(), 0, 0);
         final UUID uniqueId = player.getUniqueId();
         for (int x = -radius; x < radius; x++) {
             for (int y = -radius; y < radius; y++) {
@@ -176,7 +174,7 @@ public class SearchCommand implements CommandTabCompleter {
                         continue;
                     }
                     Location added = center.clone().add(temp);
-                    if (player.getWorld().getBlockAt(added).getType() != Material.CHEST) {
+                    if (player.getWorld().getBlockAt(added).getType() != Material.CHEST && player.getWorld().getBlockAt(added).getType() != Material.SHULKER_BOX) {
                         continue;
                     }
                     if (locations.get(uniqueId).add(added)) {
@@ -201,7 +199,7 @@ public class SearchCommand implements CommandTabCompleter {
             player.sendMessage("You haven't marked any chests to search");
             return;
         }
-        playerLocs.removeIf(Loc -> player.getLocation().distance(Loc) <= radius || Loc.getBlock().getType() != Material.CHEST);
+        playerLocs.removeIf(Loc -> player.getLocation().distance(Loc) <= radius || (Loc.getBlock().getType() != Material.CHEST && Loc.getBlock().getType() != Material.SHULKER_BOX));
         player.sendMessage(length - playerLocs.size() + " chests have been unmarked");
     }
 
@@ -214,45 +212,75 @@ public class SearchCommand implements CommandTabCompleter {
      */
     private void searchChests(Player player, String itemId, int radius) {
         UUID playerId = player.getUniqueId();
+        boolean foundAny = false;
+        Map<String, Integer> enderResults = new HashMap<>();
+        iterateChest(itemId, enderResults, player.getEnderChest().getContents(), false);
+        if (!enderResults.isEmpty()) {
+            foundAny = true;
+            for (String s : enderResults.keySet()) {
+                if (s.startsWith("$")) {
+                    player.sendMessage(enderResults.get(s) + " " + s.replace("$", "") + " in shulker Box within ender chest");
+                    continue;
+                }
+                player.sendMessage(enderResults.get(s) + " " + s + " in ender chest");
+            }
+        }
         if (!locations.containsKey(playerId) || locations.get(playerId).isEmpty()) {
-            player.sendMessage("You haven't marked any chests to search");
+            player.sendMessage("You haven't marked any chests or shulker boxes to search");
             return;
         }
-        boolean foundAny = false;
         for (Location l : locations.get(playerId)) {
             Map<String, Integer> results = new HashMap<>();
             if (radius != -1 && l.distance(player.getLocation()) > radius) {
                 continue;
             }
-            Chest b = (Chest) l.getBlock().getState();
-            ItemStack[] contents = b.getBlockInventory().getContents();
-            for (ItemStack is : contents) {
-                if (is == null) {
-                    continue;
-                }
-                String iSName = is.getType().toString();
-                if (iSName.toLowerCase().contains(itemId.toLowerCase())) {
-                    results.merge(iSName, Integer.valueOf(is.getAmount()), Integer::sum);
-                }
-            }
+            Container b = (Container) l.getBlock().getState();
+            ItemStack[] contents = b.getInventory().getContents();
+            iterateChest(itemId, results, contents, false);
             if (!results.isEmpty()) {
                 foundAny = true;
                 Location l2 = l.clone().add(new Vector(0.5, 2, 0.5));
 
-                BukkitTask bukkitTask = Bukkit.getScheduler().runTaskTimer(this.plugin, () -> {
+                BukkitTask bukkitTask = Bukkit.getScheduler().runTaskTimer(plugin, () -> {
                     l2.getWorld().spawnParticle(Particle.COMPOSTER, l2, 10, 0.25, 0.25, 0.25, 0);
                 }, 0, 20);
-                Bukkit.getScheduler().runTaskLater(this.plugin, () -> {
+                Bukkit.getScheduler().runTaskLater(plugin, () -> {
                     bukkitTask.cancel();
                 }, 20 * 3);
                 for (String s : results.keySet()) {
-                    player.sendMessage(results.get(s) + " " + s + " at x:" + l.getX() + " y: " + l.getY() + " z:" + l.getZ() + " in "
-                        + l.getWorld().getEnvironment());
+                    if (s.startsWith("$")) {
+                        player.sendMessage(results.get(s) + " " + s.replace("$", "") + " in shulker box within chest" + " at x:" + l.getX() + " y: " + l.getY() + " z:" + l.getZ() + " in " + l.getWorld().getEnvironment());
+                        continue;
+                    }
+                    player.sendMessage(results.get(s) + " " + s + " at x:" + l.getX() + " y: " + l.getY() + " z:" + l.getZ() + " in " + l.getWorld().getEnvironment());
                 }
             }
         }
         if (!foundAny) {
             player.sendMessage("No items found");
+        }
+    }
+
+    private void iterateChest(String itemId, Map<String, Integer> results, ItemStack[] contents, boolean nested) {
+        for (ItemStack is : contents) {
+            if (is == null) {
+                continue;
+            }
+            String iSName = is.getType().toString();
+            String shulkerSign = "";
+            if (nested) {
+                shulkerSign = "$";
+            }
+            if (is.getType() == Material.SHULKER_BOX) {
+                iterateChest(itemId, results, ((ShulkerBox) ((BlockStateMeta) is.getItemMeta()).getBlockState()).getInventory().getContents(), true);
+            }
+            if (itemId.contains("\"")) {
+                if (iSName.equalsIgnoreCase(itemId.replaceAll("\"", ""))) {
+                    results.merge(shulkerSign + iSName, is.getAmount(), Integer::sum);
+                }
+            } else if (iSName.toLowerCase().contains(itemId.toLowerCase())) {
+                results.merge(shulkerSign + iSName, is.getAmount(), Integer::sum);
+            }
         }
     }
 

@@ -1,4 +1,4 @@
-package de.kaonashi.minecraft.multichestsearch;
+package de.vercility.minecraft.multichestsearch;
 
 import java.io.File;
 
