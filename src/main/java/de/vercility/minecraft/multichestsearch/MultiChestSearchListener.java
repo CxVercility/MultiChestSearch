@@ -1,7 +1,9 @@
 package de.vercility.minecraft.multichestsearch;
 
 import java.io.File;
+import java.util.HashMap;
 import java.util.HashSet;
+import java.util.Map;
 import java.util.UUID;
 
 import de.kaonashi.minecraft.commons.item.ItemHelper;
@@ -19,15 +21,7 @@ import org.bukkit.inventory.ItemStack;
 
 public class MultiChestSearchListener implements Listener {
 
-    public static boolean removeNext = false;
-
-    private YamlConfiguration chestConfig;
-    private File chestFile;
-
-    public MultiChestSearchListener(YamlConfiguration chestConfig, File chestFile) {
-        this.chestConfig = chestConfig;
-        this.chestFile = chestFile;
-    }
+    public static Map<UUID, Boolean> removeNext = new HashMap<>();
 
     /**
      * Mark a chest on right-click with chest marker item
@@ -55,9 +49,10 @@ public class MultiChestSearchListener implements Listener {
         UUID playerId = player.getUniqueId();
         Location location = event.getClickedBlock().getLocation();
         SearchCommand.locations.putIfAbsent(playerId, new HashSet<>());
+        removeNext.putIfAbsent(playerId,false);
         //remove command. Unmarks a chest once.
-        if (removeNext) {
-            removeNext = false;
+        if (removeNext.getOrDefault(playerId,false)) {
+            removeNext.put(playerId,false);
             if (SearchCommand.locations.get(playerId).remove(location)) {
                 player.sendMessage("Unmarked chest");
             } else {

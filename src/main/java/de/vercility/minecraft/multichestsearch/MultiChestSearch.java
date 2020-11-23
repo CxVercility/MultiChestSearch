@@ -6,18 +6,23 @@ import org.bukkit.configuration.file.YamlConfiguration;
 
 import de.kaonashi.minecraft.commons.command.CommandRegistry;
 import de.kaonashi.minecraft.commons.plugin.KaonashiPlugin;
+import org.bukkit.configuration.file.YamlConfigurationOptions;
 
 public class MultiChestSearch extends KaonashiPlugin {
-
-    private final File chestFile = new File(getDataFolder(), "chestLocations.yml");
-    private YamlConfiguration chestConfig;
+        SearchCommand searchCommand = new SearchCommand(this,new File(getDataFolder(),"chestConfig.yml"));
 
     @Override
     protected void onEnableHook() throws Exception {
-        this.pm.registerEvents(new MultiChestSearchListener(this.chestConfig, this.chestFile), this);
-        CommandRegistry.register(new SearchCommand(this), this);
+        this.pm.registerEvents(new MultiChestSearchListener(), this);
+        this.searchCommand.loadConfig();
+        CommandRegistry.register(this.searchCommand, this);
         this.itemRegistry.register(this,MultiChestSearchItem.ITEM_STACK);
         this.recipeRegistry.register(this,MultiChestSearchItem.class);
         this.advancementRegistry.register(this,MultiChestSearchItem.class);
+    }
+
+    @Override
+    protected void onDisableHook() throws Exception {
+    this.searchCommand.saveConfig();
     }
 }

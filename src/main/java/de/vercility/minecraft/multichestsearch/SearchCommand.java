@@ -1,5 +1,7 @@
 package de.vercility.minecraft.multichestsearch;
 
+import java.io.File;
+import java.io.IOException;
 import java.util.*;
 
 import org.bukkit.Bukkit;
@@ -10,6 +12,8 @@ import org.bukkit.block.Container;
 import org.bukkit.block.ShulkerBox;
 import org.bukkit.command.Command;
 import org.bukkit.command.CommandSender;
+import org.bukkit.configuration.InvalidConfigurationException;
+import org.bukkit.configuration.file.YamlConfiguration;
 import org.bukkit.entity.Player;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.inventory.meta.BlockStateMeta;
@@ -21,13 +25,20 @@ import de.kaonashi.minecraft.commons.command.CommandTabCompleter;
 
 public class SearchCommand implements CommandTabCompleter {
 
+
     public static Map<UUID, HashSet<Location>> locations = new HashMap<>();
+
+
     private final Plugin plugin;
 
-    public int maxHeight = 10;
-    public int maxRadius = 50;
+    private YamlConfiguration chestConfig = new YamlConfiguration();
+    private File chestFile;
 
-    public SearchCommand(Plugin plugin) {
+    public static int maxHeight = 10;
+    public static int maxRadius = 25; //Anti-lag in case someone exploits this command
+
+    public SearchCommand(Plugin plugin, File cF) {
+        this.chestFile = cF;
         this.plugin = plugin;
     }
 
@@ -85,7 +96,7 @@ public class SearchCommand implements CommandTabCompleter {
         player.sendMessage("/search <Item Name> <radius> - Only search chests within set radius");
         player.sendMessage("/search clear - Unmark all chests");
         player.sendMessage("/search remove - Next clicked chest will be unmarked");
-        player.sendMessage("/search mark <radius> - Mark all chests within set radius (horizontally, up to 10 Blocks up/down. Max radius 50)");
+        player.sendMessage("/search mark <radius> - Mark all chests within set radius (horizontally, up to " + maxHeight + " Blocks up/down. Max radius is " + maxRadius + ")");
     }
 
 
@@ -143,7 +154,7 @@ public class SearchCommand implements CommandTabCompleter {
                 player.sendMessage("Cleared marked chests");
                 return;
             case "remove":
-                MultiChestSearchListener.removeNext = true;
+                MultiChestSearchListener.removeNext.put(player.getUniqueId(),true);
                 player.sendMessage("Rightclick a chest with a chest marker to unmark it");
                 return;
             case "mark":
@@ -156,7 +167,7 @@ public class SearchCommand implements CommandTabCompleter {
     }
 
     /**
-     * Marks all chest within given radiu
+     * Marks all chest within given radius
      *
      * @param player Player who issued the command
      * @param radius The radius within chests are to be marked
@@ -241,10 +252,10 @@ public class SearchCommand implements CommandTabCompleter {
                 foundAny = true;
                 Location l2 = l.clone().add(new Vector(0.5, 2, 0.5));
 
-                BukkitTask bukkitTask = Bukkit.getScheduler().runTaskTimer(plugin, () -> {
+                BukkitTask bukkitTask = Bukkit.getScheduler().runTaskTimer(this.plugin, () -> {
                     l2.getWorld().spawnParticle(Particle.COMPOSTER, l2, 10, 0.25, 0.25, 0.25, 0);
                 }, 0, 20);
-                Bukkit.getScheduler().runTaskLater(plugin, () -> {
+                Bukkit.getScheduler().runTaskLater(this.plugin, () -> {
                     bukkitTask.cancel();
                 }, 20 * 3);
                 for (String s : results.keySet()) {
@@ -276,11 +287,12 @@ public class SearchCommand implements CommandTabCompleter {
             }
             if (itemId.contains("\"")) {
                 if (iSName.equalsIgnoreCase(itemId.replaceAll("\"", ""))) {
-                    results.merge(shulkerSign + iSName, is.getAmount(), Integer::sum);
+                    results.merge(shulkerSign + iSName, Integer.valueOf(is.getAmount()), Integer::sum);
                 }
             } else if (iSName.toLowerCase().contains(itemId.toLowerCase())) {
-                results.merge(shulkerSign + iSName, is.getAmount(), Integer::sum);
+                results.merge(shulkerSign + iSName, Integer.valueOf(is.getAmount()), Integer::sum);
             }
+            
         }
     }
 
@@ -292,5 +304,33 @@ public class SearchCommand implements CommandTabCompleter {
     @Override
     public String getCommand() {
         return "search";
+    }
+
+    public void loadConfig(){
+        if(!this.chestFile.exists()) {
+            return;
+        }
+        try {
+            this.chestConfig.load(this.chestFile);
+        } catch (IOException e) {
+            e.printStackTrace();
+        } catch (InvalidConfigurationException e) {
+            e.printStackTrace();
+        }
+        for (String key : this.chestConfig.getKeys(false)) {
+            locations.put(UUID.fromString(key), (HashSet<Location>) this.chestConfig.get(key));
+        }
+    }
+
+    public void saveConfig() {
+        for(UUID player : locations.keySet()){
+            this.chestConfig.set(player.toString(),locations.get(player));
+        }
+        try {
+            this.chestConfig.save(this.chestFile);
+        }
+        catch (IOException e) {
+            e.printStackTrace();
+        }
     }
 }

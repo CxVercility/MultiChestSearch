@@ -1,3 +1,4 @@
+depend: [MinecraftCommons]
 commands:
   search:
     description: 'Searches all marked chests'
